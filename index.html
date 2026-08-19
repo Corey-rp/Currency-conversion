@@ -49,6 +49,8 @@
 
       <div class="rate-line" id="rateLine"></div>
       <div class="updated-line" id="updatedLine"></div>
+
+      <button type="button" id="chartBtn" class="chart-trigger" disabled>📈 View trend</button>
     </div>
 
     <div class="card">
@@ -75,6 +77,33 @@
       <button type="button" id="pickerCancel" class="picker-cancel">Cancel</button>
     </div>
     <div id="pickerList" class="picker-list" role="listbox"></div>
+  </div>
+</div>
+
+<div class="chart-overlay" id="chartOverlay" hidden>
+  <div class="chart-sheet" role="dialog" aria-modal="true" aria-label="Currency trend chart">
+    <div class="chart-header">
+      <div>
+        <div class="chart-pair" id="chartPairLabel">USD → EUR</div>
+        <div class="chart-summary" id="chartSummary"></div>
+      </div>
+      <button type="button" id="chartClose" class="chart-close" aria-label="Close chart">✕</button>
+    </div>
+
+    <div class="chart-range-row" id="chartRangeRow">
+      <button type="button" class="range-btn" data-days="7">7D</button>
+      <button type="button" class="range-btn active" data-days="30">30D</button>
+      <button type="button" class="range-btn" data-days="90">90D</button>
+      <button type="button" class="range-btn" data-days="365">1Y</button>
+    </div>
+
+    <div class="chart-body">
+      <p class="chart-status" id="chartStatus">Loading trend…</p>
+      <svg id="chartSvg" viewBox="0 0 300 120" preserveAspectRatio="none" class="chart-svg" hidden></svg>
+    </div>
+    <div class="chart-axis-labels" id="chartAxisLabels"></div>
+
+    <p class="chart-footnote">Historical rates via <a href="https://www.frankfurter.app" target="_blank" rel="noopener">Frankfurter</a> (ECB data — covers major currencies).</p>
   </div>
 </div>
 

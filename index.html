@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#0f172a">
+<title>Currency Converter &amp; Travel Timing</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💱</text></svg>">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>💱 Currency &amp; Travel</h1>
+  <button id="themeToggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle dark mode">🌙</button>
+</header>
+
+<main>
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="convert" role="tab" aria-selected="true">Convert</button>
+    <button class="tab" data-tab="travel" role="tab" aria-selected="false">Best Time to Travel</button>
+  </nav>
+
+  <!-- CONVERTER -->
+  <section id="tab-convert" class="tab-panel active">
+    <div class="card">
+      <div id="rateStatus" class="status">Loading exchange rates…</div>
+
+      <div class="convert-row">
+        <label for="amountFrom" class="sr-only">Amount</label>
+        <input type="number" id="amountFrom" inputmode="decimal" placeholder="0.00" value="1" />
+        <select id="currencyFrom" aria-label="From currency"></select>
+      </div>
+
+      <button id="swapBtn" class="swap-btn" aria-label="Swap currencies" title="Swap currencies">⇅</button>
+
+      <div class="convert-row">
+        <label for="amountTo" class="sr-only">Converted amount</label>
+        <input type="number" id="amountTo" inputmode="decimal" placeholder="0.00" readonly />
+        <select id="currencyTo" aria-label="To currency"></select>
+      </div>
+
+      <div class="rate-line" id="rateLine"></div>
+      <div class="updated-line" id="updatedLine"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">Favorites</h2>
+      <div id="favoritesList" class="chip-list"></div>
+      <p class="hint">Tap ★ next to a currency in the dropdowns to pin it here.</p>
+    </div>
+  </section>
+
+  <!-- TRAVEL -->
+  <section id="tab-travel" class="tab-panel">
+    <div class="card">
+      <label for="countrySearch" class="sr-only">Search country</label>
+      <input type="search" id="countrySearch" placeholder="Search a country (e.g. Japan, Peru, Kenya)…" />
+      <div id="countryResults" class="country-list"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>Rates via <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">exchangerate-api.com</a> (updated daily). Travel timing is general guidance — always check local advisories.</p>
+</footer>
+
+<script src="js/travelData.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

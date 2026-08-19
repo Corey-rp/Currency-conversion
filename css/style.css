@@ -238,28 +238,10 @@ main {
 
 .picker-item {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  align-items: center;
+  gap: 4px;
   width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-  padding: 13px 6px;
   border-bottom: 1px solid var(--border);
-  cursor: pointer;
-}
-
-.picker-item .code {
-  font-weight: 700;
-  flex: none;
-}
-
-.picker-item .name {
-  color: var(--muted);
-  font-size: 0.85rem;
-  text-align: right;
 }
 
 .picker-item.selected {
@@ -267,7 +249,48 @@ main {
   border-radius: 10px;
 }
 
-.picker-item.selected .code {
+.picker-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 13px 6px;
+  cursor: pointer;
+}
+
+.picker-item-main .code {
+  font-weight: 700;
+  flex: none;
+}
+
+.picker-item-main .name {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.picker-item.selected .picker-item-main .code {
+  color: var(--accent);
+}
+
+.picker-item-star {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  padding: 10px 8px;
+  cursor: pointer;
+}
+
+.picker-item-star.active {
   color: var(--accent);
 }
 

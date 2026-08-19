@@ -134,6 +134,7 @@ main {
 
 .status.error { color: #e0554f; }
 .status.ok { color: #21a566; }
+.status.offline { color: #c9821f; }
 
 .convert-row {
   display: flex;
@@ -574,6 +575,18 @@ main {
 .month-strip span.hit {
   background: var(--accent);
   color: #fff;
+}
+
+.convert-link {
+  display: block;
+  margin-top: 10px;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
 }
 
 .select-star {

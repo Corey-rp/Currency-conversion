@@ -12,6 +12,7 @@
   const LS_THEME = "cc_theme";
   const LS_FAVORITES = "cc_favorites";
   const LS_LAST = "cc_last_pair";
+  const LS_CACHED_RATES = "cc_cached_rates";
 
   let rates = null; // { USD: 1, EUR: 0.9, ... } base USD
   let baseCurrency = "USD";
@@ -71,17 +72,18 @@
   });
 
   // ---------- Tabs ----------
-  document.querySelectorAll(".tab").forEach((tabBtn) => {
-    tabBtn.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach((t) => {
-        t.classList.remove("active");
-        t.setAttribute("aria-selected", "false");
-      });
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-      tabBtn.classList.add("active");
-      tabBtn.setAttribute("aria-selected", "true");
-      $(`tab-${tabBtn.dataset.tab}`).classList.add("active");
+  function activateTab(name) {
+    document.querySelectorAll(".tab").forEach((t) => {
+      const isActive = t.dataset.tab === name;
+      t.classList.toggle("active", isActive);
+      t.setAttribute("aria-selected", String(isActive));
     });
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    $(`tab-${name}`).classList.add("active");
+  }
+
+  document.querySelectorAll(".tab").forEach((tabBtn) => {
+    tabBtn.addEventListener("click", () => activateTab(tabBtn.dataset.tab));
   });
 
   // ---------- Favorites ----------
@@ -293,6 +295,32 @@
     };
   }
 
+  function loadCachedRates() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(LS_CACHED_RATES));
+      if (!cached || !cached.rates) return null;
+      return cached;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveCachedRates(ratesToCache, updated) {
+    localStorage.setItem(
+      LS_CACHED_RATES,
+      JSON.stringify({ rates: ratesToCache, updated, cachedAt: Date.now() })
+    );
+  }
+
+  function applyRates(newRates, updatedLabel) {
+    rates = newRates;
+    lastUpdated = updatedLabel;
+    setupCurrencies(Object.keys(rates));
+    renderFavorites();
+    convert();
+    chartBtn.disabled = false;
+  }
+
   async function loadRates() {
     rateStatusEl.textContent = "Loading exchange rates…";
     rateStatusEl.className = "status";
@@ -304,20 +332,24 @@
       try {
         result = await fetchFallbackRates();
       } catch (fallbackErr) {
-        rateStatusEl.textContent = "Couldn't load live rates. Check your connection and reload.";
-        rateStatusEl.className = "status error";
         console.error(fallbackErr);
+        const cached = loadCachedRates();
+        if (cached) {
+          applyRates(cached.rates, cached.updated);
+          const cachedDate = new Date(cached.cachedAt).toLocaleString();
+          rateStatusEl.textContent = `Offline — showing rates cached ${cachedDate}`;
+          rateStatusEl.className = "status offline";
+          updatedLineEl.textContent = `Rates last updated: ${lastUpdated} (cached, not live)`;
+        } else {
+          rateStatusEl.textContent = "Couldn't load live rates. Check your connection and reload.";
+          rateStatusEl.className = "status error";
+        }
         return;
       }
     }
 
-    rates = result.rates;
-    lastUpdated = result.updated;
-
-    setupCurrencies(Object.keys(rates));
-    renderFavorites();
-    convert();
-    chartBtn.disabled = false;
+    applyRates(result.rates, result.updated);
+    saveCachedRates(result.rates, result.updated);
 
     rateStatusEl.textContent = "Live rates loaded";
     rateStatusEl.className = "status ok";
@@ -517,9 +549,19 @@
         <div class="best">Best: ${c.best}</div>
         <div class="note">${c.note}</div>
         <div class="month-strip">${monthSpans}</div>
+        <button type="button" class="convert-link">Convert to ${c.currency} →</button>
       `;
+      div.querySelector(".convert-link").addEventListener("click", () => goToConverter(c.currency));
       countryResultsEl.appendChild(div);
     });
+  }
+
+  function goToConverter(currencyCode) {
+    if (allCodes.includes(currencyCode)) {
+      selectCurrency("to", currencyCode);
+    }
+    activateTab("convert");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   countrySearchEl.addEventListener("input", () => renderCountryList(countrySearchEl.value));

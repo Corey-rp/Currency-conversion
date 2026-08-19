@@ -1,0 +1,14 @@
+{
+  "name": "Currency & Travel Converter",
+  "short_name": "Currency",
+  "description": "Convert any currency instantly and see the best time to travel to popular destinations.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f172a",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icons/icon.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

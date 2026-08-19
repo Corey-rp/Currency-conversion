@@ -177,15 +177,36 @@
 
     const currentValue = selected[pickerTarget];
     matches.forEach((code) => {
-      const item = document.createElement("button");
-      item.type = "button";
-      item.setAttribute("role", "option");
+      const item = document.createElement("div");
       item.className = "picker-item" + (code === currentValue ? " selected" : "");
-      item.innerHTML = `<span class="code">${code}</span><span class="name">${CURRENCY_NAMES[code] || ""}</span>`;
-      item.addEventListener("click", () => {
+
+      const main = document.createElement("button");
+      main.type = "button";
+      main.className = "picker-item-main";
+      main.setAttribute("role", "option");
+      main.innerHTML = `<span class="code">${code}</span><span class="name">${CURRENCY_NAMES[code] || ""}</span>`;
+      main.addEventListener("click", () => {
         selectCurrency(pickerTarget, code);
         closePicker();
       });
+
+      const isFav = getFavorites().includes(code);
+      const star = document.createElement("button");
+      star.type = "button";
+      star.className = "picker-item-star" + (isFav ? " active" : "");
+      star.textContent = isFav ? "★" : "☆";
+      star.setAttribute("aria-label", isFav ? `Remove ${code} from favorites` : `Add ${code} to favorites`);
+      star.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggleFavorite(code);
+        const nowFav = getFavorites().includes(code);
+        star.textContent = nowFav ? "★" : "☆";
+        star.classList.toggle("active", nowFav);
+        star.setAttribute("aria-label", nowFav ? `Remove ${code} from favorites` : `Add ${code} to favorites`);
+      });
+
+      item.appendChild(main);
+      item.appendChild(star);
       pickerList.appendChild(item);
     });
   }

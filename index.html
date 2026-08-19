@@ -30,7 +30,10 @@
       <div class="convert-row">
         <label for="amountFrom" class="sr-only">Amount</label>
         <input type="number" id="amountFrom" inputmode="decimal" placeholder="0.00" value="1" />
-        <select id="currencyFrom" aria-label="From currency"></select>
+        <button type="button" id="currencyFromTrigger" class="currency-trigger" aria-haspopup="dialog">
+          <span id="currencyFromLabel">USD</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
       </div>
 
       <button id="swapBtn" class="swap-btn" aria-label="Swap currencies" title="Swap currencies">⇅</button>
@@ -38,7 +41,10 @@
       <div class="convert-row">
         <label for="amountTo" class="sr-only">Converted amount</label>
         <input type="number" id="amountTo" inputmode="decimal" placeholder="0.00" readonly />
-        <select id="currencyTo" aria-label="To currency"></select>
+        <button type="button" id="currencyToTrigger" class="currency-trigger" aria-haspopup="dialog">
+          <span id="currencyToLabel">EUR</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </button>
       </div>
 
       <div class="rate-line" id="rateLine"></div>
@@ -61,6 +67,16 @@
     </div>
   </section>
 </main>
+
+<div class="picker-overlay" id="pickerOverlay" hidden>
+  <div class="picker-sheet" role="dialog" aria-modal="true" aria-label="Choose a currency">
+    <div class="picker-header">
+      <input type="search" id="pickerSearch" placeholder="Search currency name or code…" />
+      <button type="button" id="pickerCancel" class="picker-cancel">Cancel</button>
+    </div>
+    <div id="pickerList" class="picker-list" role="listbox"></div>
+  </div>
+</div>
 
 <footer>
   <p>Rates via <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">exchangerate-api.com</a> (updated daily). Travel timing is general guidance — always check local advisories.</p>

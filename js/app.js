@@ -3,7 +3,12 @@
 
   const RATES_API = "https://open.er-api.com/v6/latest/USD";
   const FALLBACK_RATES_API = "https://api.frankfurter.app/latest?from=USD";
-  const HISTORY_API = "https://api.frankfurter.app";
+  // Historical rates: daily static JSON snapshots (fawazahmed0/currency-api),
+  // mirrored on two independent hosts for resilience. Covers ~150 currencies.
+  const HISTORY_HOSTS = [
+    "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@{date}/v1/currencies/{from}.json",
+    "https://{date}.currency-api.pages.dev/v1/currencies/{from}.json",
+  ];
   const LS_THEME = "cc_theme";
   const LS_FAVORITES = "cc_favorites";
   const LS_LAST = "cc_last_pair";
@@ -328,30 +333,48 @@
     return err;
   }
 
-  async function fetchHistory(from, to, days) {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    const fmt = (d) => d.toISOString().slice(0, 10);
-    const url = `${HISTORY_API}/${fmt(start)}..${fmt(end)}?from=${from}&to=${to}`;
+  function buildSampleDates(days) {
+    // Coarser sampling for longer ranges keeps the request count sane
+    // while still tracing a meaningful trend line.
+    const stepDays = days <= 7 ? 1 : days <= 30 ? 3 : days <= 90 ? 7 : 30;
+    const today = new Date();
+    const dates = [];
+    for (let offset = days; offset > 0; offset -= stepDays) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - offset);
+      dates.push(d.toISOString().slice(0, 10));
+    }
+    dates.push(today.toISOString().slice(0, 10));
+    return dates;
+  }
 
-    let res;
-    try {
-      res = await fetch(url);
-    } catch {
-      // fetch() itself rejects on network/DNS/CORS failures, not on API error responses
+  async function fetchDayRate(dateStr, from, to) {
+    for (const host of HISTORY_HOSTS) {
+      const url = host.replace("{date}", dateStr).replace("{from}", from.toLowerCase());
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const value = data[from.toLowerCase()]?.[to.toLowerCase()];
+        if (typeof value === "number") return value;
+      } catch {
+        // try the next mirror
+      }
+    }
+    return null;
+  }
+
+  async function fetchHistory(from, to, days) {
+    const dates = buildSampleDates(days);
+    const results = await Promise.all(
+      dates.map((date) => fetchDayRate(date, from, to).then((value) => ({ date, value })))
+    );
+    const points = results.filter((p) => typeof p.value === "number");
+
+    if (!points.length) {
+      // Every single date failed on both mirrors — almost certainly connectivity, not coverage.
       throw chartError("Network request failed", "network");
     }
-
-    if (!res.ok) throw chartError(`HTTP ${res.status}`, "unsupported");
-    const data = await res.json();
-    if (!data.rates) throw chartError("No historical data", "unsupported");
-
-    const points = Object.keys(data.rates)
-      .sort()
-      .map((date) => ({ date, value: data.rates[date][to] }))
-      .filter((p) => typeof p.value === "number");
-
     if (points.length < 2) throw chartError("Not enough data points", "unsupported");
     return points;
   }
@@ -392,7 +415,7 @@
       <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
       <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3" fill="${color}"></circle>
     `;
-    chartSvg.hidden = false;
+    chartSvg.style.display = "";
 
     const arrow = isUp ? "▲" : "▼";
     const verb = isUp ? "strengthened" : "weakened";
@@ -406,7 +429,7 @@
     rangeButtons.forEach((b) => b.classList.toggle("active", Number(b.dataset.days) === days));
 
     chartStatusEl.hidden = false;
-    chartSvg.hidden = true;
+    chartSvg.style.display = "none";
     chartAxisLabelsEl.innerHTML = "";
     chartSummaryEl.textContent = "";
 
@@ -431,7 +454,7 @@
           'Couldn\'t reach the trend data service. Check your connection and <button type="button" class="chart-retry" id="chartRetryBtn">try again</button>.';
         $("chartRetryBtn").addEventListener("click", () => loadChart(days));
       } else {
-        chartStatusEl.textContent = `Historical trend isn't available for ${from}/${to} yet — try a major currency like EUR, GBP, or JPY.`;
+        chartStatusEl.textContent = `Historical trend isn't available for ${from}/${to} right now — try a different currency pair.`;
       }
     }
   }

@@ -452,10 +452,6 @@ main {
   height: 140px;
 }
 
-.chart-svg[hidden] {
-  display: none;
-}
-
 .chart-axis-labels {
   display: flex;
   justify-content: space-between;

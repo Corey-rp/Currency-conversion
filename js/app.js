@@ -3,6 +3,7 @@
 
   const RATES_API = "https://open.er-api.com/v6/latest/USD";
   const FALLBACK_RATES_API = "https://api.frankfurter.app/latest?from=USD";
+  const HISTORY_API = "https://api.frankfurter.app";
   const LS_THEME = "cc_theme";
   const LS_FAVORITES = "cc_favorites";
   const LS_LAST = "cc_last_pair";
@@ -32,6 +33,15 @@
   const swapBtn = $("swapBtn");
   const favoritesListEl = $("favoritesList");
   const themeToggle = $("themeToggle");
+  const chartBtn = $("chartBtn");
+  const chartOverlay = $("chartOverlay");
+  const chartClose = $("chartClose");
+  const chartPairLabelEl = $("chartPairLabel");
+  const chartSummaryEl = $("chartSummary");
+  const chartStatusEl = $("chartStatus");
+  const chartSvg = $("chartSvg");
+  const chartAxisLabelsEl = $("chartAxisLabels");
+  const rangeButtons = document.querySelectorAll(".range-btn");
 
   // ---------- Theme ----------
   function applyTheme(theme) {
@@ -302,11 +312,134 @@
     setupCurrencies(Object.keys(rates));
     renderFavorites();
     convert();
+    chartBtn.disabled = false;
 
     rateStatusEl.textContent = "Live rates loaded";
     rateStatusEl.className = "status ok";
     updatedLineEl.textContent = `Rates last updated: ${lastUpdated}`;
   }
+
+  // ---------- Trend chart ----------
+  let currentChartDays = 30;
+
+  async function fetchHistory(from, to, days) {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    const fmt = (d) => d.toISOString().slice(0, 10);
+    const url = `${HISTORY_API}/${fmt(start)}..${fmt(end)}?from=${from}&to=${to}`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.rates) throw new Error("No historical data");
+
+    const points = Object.keys(data.rates)
+      .sort()
+      .map((date) => ({ date, value: data.rates[date][to] }))
+      .filter((p) => typeof p.value === "number");
+
+    if (points.length < 2) throw new Error("Not enough data points");
+    return points;
+  }
+
+  function renderChart(points) {
+    const values = points.map((p) => p.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    const w = 300;
+    const h = 120;
+    const pad = 8;
+
+    const coords = points.map((p, i) => {
+      const x = points.length === 1 ? w / 2 : (i / (points.length - 1)) * (w - pad * 2) + pad;
+      const y = h - pad - ((p.value - min) / range) * (h - pad * 2);
+      return [x, y];
+    });
+
+    const linePoints = coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
+    const areaPoints = `${pad},${h - pad} ${linePoints} ${w - pad},${h - pad}`;
+
+    const first = values[0];
+    const last = values[values.length - 1];
+    const pctChange = ((last - first) / first) * 100;
+    const isUp = pctChange >= 0;
+    const color = isUp ? "#1f9d63" : "#e0554f";
+    const [lastX, lastY] = coords[coords.length - 1];
+
+    chartSvg.innerHTML = `
+      <defs>
+        <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${color}" stop-opacity="0.25" />
+          <stop offset="100%" stop-color="${color}" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points="${areaPoints}" fill="url(#chartFill)" stroke="none"></polygon>
+      <polyline points="${linePoints}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+      <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="3" fill="${color}"></circle>
+    `;
+    chartSvg.hidden = false;
+
+    const arrow = isUp ? "▲" : "▼";
+    const verb = isUp ? "strengthened" : "weakened";
+    chartSummaryEl.innerHTML = `<span class="${isUp ? "up" : "down"}">${arrow} ${Math.abs(pctChange).toFixed(2)}%</span> — ${selected.from} ${verb} against ${selected.to}`;
+
+    chartAxisLabelsEl.innerHTML = `<span>${points[0].date}</span><span>${points[points.length - 1].date}</span>`;
+  }
+
+  async function loadChart(days) {
+    currentChartDays = days;
+    rangeButtons.forEach((b) => b.classList.toggle("active", Number(b.dataset.days) === days));
+
+    chartStatusEl.hidden = false;
+    chartSvg.hidden = true;
+    chartAxisLabelsEl.innerHTML = "";
+    chartSummaryEl.textContent = "";
+
+    const from = selected.from;
+    const to = selected.to;
+
+    if (from === to) {
+      chartStatusEl.textContent = "Pick two different currencies to see a trend.";
+      return;
+    }
+
+    chartStatusEl.textContent = "Loading trend…";
+    try {
+      const points = await fetchHistory(from, to, days);
+      chartStatusEl.hidden = true;
+      renderChart(points);
+    } catch (err) {
+      console.warn("Chart history unavailable", err);
+      chartStatusEl.textContent = `Historical trend isn't available for ${from}/${to} yet — try a major currency like EUR, GBP, or JPY.`;
+      chartStatusEl.hidden = false;
+    }
+  }
+
+  function openChart() {
+    chartPairLabelEl.textContent = `${selected.from} → ${selected.to}`;
+    chartOverlay.hidden = false;
+    document.body.style.overflow = "hidden";
+    loadChart(currentChartDays);
+  }
+
+  function closeChart() {
+    chartOverlay.hidden = true;
+    document.body.style.overflow = "";
+  }
+
+  chartBtn.addEventListener("click", openChart);
+  chartClose.addEventListener("click", closeChart);
+  chartOverlay.addEventListener("click", (e) => {
+    if (e.target === chartOverlay) closeChart();
+  });
+  rangeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => loadChart(Number(btn.dataset.days)));
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !chartOverlay.hidden) closeChart();
+  });
 
   // ---------- Travel tab ----------
   const countrySearchEl = $("countrySearch");

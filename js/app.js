@@ -322,6 +322,12 @@
   // ---------- Trend chart ----------
   let currentChartDays = 30;
 
+  function chartError(message, kind) {
+    const err = new Error(message);
+    err.kind = kind;
+    return err;
+  }
+
   async function fetchHistory(from, to, days) {
     const end = new Date();
     const start = new Date();
@@ -329,17 +335,24 @@
     const fmt = (d) => d.toISOString().slice(0, 10);
     const url = `${HISTORY_API}/${fmt(start)}..${fmt(end)}?from=${from}&to=${to}`;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    let res;
+    try {
+      res = await fetch(url);
+    } catch {
+      // fetch() itself rejects on network/DNS/CORS failures, not on API error responses
+      throw chartError("Network request failed", "network");
+    }
+
+    if (!res.ok) throw chartError(`HTTP ${res.status}`, "unsupported");
     const data = await res.json();
-    if (!data.rates) throw new Error("No historical data");
+    if (!data.rates) throw chartError("No historical data", "unsupported");
 
     const points = Object.keys(data.rates)
       .sort()
       .map((date) => ({ date, value: data.rates[date][to] }))
       .filter((p) => typeof p.value === "number");
 
-    if (points.length < 2) throw new Error("Not enough data points");
+    if (points.length < 2) throw chartError("Not enough data points", "unsupported");
     return points;
   }
 
@@ -412,8 +425,14 @@
       renderChart(points);
     } catch (err) {
       console.warn("Chart history unavailable", err);
-      chartStatusEl.textContent = `Historical trend isn't available for ${from}/${to} yet — try a major currency like EUR, GBP, or JPY.`;
       chartStatusEl.hidden = false;
+      if (err.kind === "network") {
+        chartStatusEl.innerHTML =
+          'Couldn\'t reach the trend data service. Check your connection and <button type="button" class="chart-retry" id="chartRetryBtn">try again</button>.';
+        $("chartRetryBtn").addEventListener("click", () => loadChart(days));
+      } else {
+        chartStatusEl.textContent = `Historical trend isn't available for ${from}/${to} yet — try a major currency like EUR, GBP, or JPY.`;
+      }
     }
   }
 

@@ -436,6 +436,17 @@ main {
   margin: 0;
 }
 
+.chart-retry {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .chart-svg {
   width: 100%;
   height: 140px;

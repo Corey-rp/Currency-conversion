@@ -158,14 +158,117 @@ main {
   color: var(--accent);
 }
 
-.convert-row select {
+.currency-trigger {
   flex: 0 0 130px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   font-size: 1rem;
-  padding: 0 10px;
+  font-weight: 700;
+  padding: 0 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
+  cursor: pointer;
+}
+
+.currency-trigger .chev {
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.5);
+}
+
+.picker-overlay[hidden] { display: none; }
+
+.picker-sheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border-radius: 20px 20px 0 0;
+  box-shadow: var(--shadow);
+  padding: 16px 16px calc(12px + env(safe-area-inset-bottom));
+}
+
+.picker-header {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+#pickerSearch {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.picker-cancel {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.picker-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 13px 6px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.picker-item .code {
+  font-weight: 700;
+  flex: none;
+}
+
+.picker-item .name {
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-align: right;
+}
+
+.picker-item.selected {
+  background: var(--accent-soft);
+  border-radius: 10px;
+}
+
+.picker-item.selected .code {
+  color: var(--accent);
 }
 
 .swap-btn {
@@ -314,5 +417,5 @@ footer {
 footer a { color: var(--muted); }
 
 @media (min-width: 600px) {
-  .convert-row select { flex-basis: 150px; }
+  .currency-trigger { flex-basis: 150px; }
 }

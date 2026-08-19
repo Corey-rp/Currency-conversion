@@ -10,13 +10,22 @@
   let rates = null; // { USD: 1, EUR: 0.9, ... } base USD
   let baseCurrency = "USD";
   let lastUpdated = null;
+  let allCodes = [];
+  const selected = { from: "USD", to: "EUR" };
+  let pickerTarget = null;
 
   const $ = (id) => document.getElementById(id);
 
   const amountFromEl = $("amountFrom");
   const amountToEl = $("amountTo");
-  const currencyFromEl = $("currencyFrom");
-  const currencyToEl = $("currencyTo");
+  const currencyFromTrigger = $("currencyFromTrigger");
+  const currencyFromLabel = $("currencyFromLabel");
+  const currencyToTrigger = $("currencyToTrigger");
+  const currencyToLabel = $("currencyToLabel");
+  const pickerOverlay = $("pickerOverlay");
+  const pickerSearch = $("pickerSearch");
+  const pickerList = $("pickerList");
+  const pickerCancel = $("pickerCancel");
   const rateStatusEl = $("rateStatus");
   const rateLineEl = $("rateLine");
   const updatedLineEl = $("updatedLine");
@@ -100,54 +109,103 @@
         if (e.target.classList.contains("remove")) {
           toggleFavorite(code);
         } else {
-          currencyToEl.value = code;
-          convert();
+          selectCurrency("to", code);
         }
       });
       favoritesListEl.appendChild(chip);
     });
   }
 
-  // ---------- Currency dropdowns ----------
-  function currencyLabel(code) {
-    const name = (typeof CURRENCY_NAMES !== "undefined" && CURRENCY_NAMES[code]) || "";
-    return name ? `${code} — ${name}` : code;
-  }
-
-  function populateDropdowns(codes) {
-    const sorted = [...codes].sort();
-    [currencyFromEl, currencyToEl].forEach((select) => {
-      select.innerHTML = "";
-      sorted.forEach((code) => {
-        const opt = document.createElement("option");
-        opt.value = code;
-        opt.textContent = currencyLabel(code);
-        select.appendChild(opt);
-      });
-    });
+  // ---------- Currency picker ----------
+  function setupCurrencies(codes) {
+    allCodes = [...codes].sort();
 
     const lastPair = JSON.parse(localStorage.getItem(LS_LAST) || "null");
-    if (lastPair && codes.includes(lastPair.from) && codes.includes(lastPair.to)) {
-      currencyFromEl.value = lastPair.from;
-      currencyToEl.value = lastPair.to;
+    if (lastPair && allCodes.includes(lastPair.from) && allCodes.includes(lastPair.to)) {
+      selected.from = lastPair.from;
+      selected.to = lastPair.to;
     } else {
-      currencyFromEl.value = codes.includes("USD") ? "USD" : sorted[0];
-      currencyToEl.value = codes.includes("EUR") ? "EUR" : sorted[1] || sorted[0];
+      selected.from = allCodes.includes("USD") ? "USD" : allCodes[0];
+      selected.to = allCodes.includes("EUR") ? "EUR" : allCodes[1] || allCodes[0];
     }
+    updateTriggerLabels();
+  }
+
+  function updateTriggerLabels() {
+    currencyFromLabel.textContent = selected.from;
+    currencyToLabel.textContent = selected.to;
+  }
+
+  function selectCurrency(target, code) {
+    selected[target] = code;
+    updateTriggerLabels();
+    convert();
   }
 
   function savePair() {
-    localStorage.setItem(
-      LS_LAST,
-      JSON.stringify({ from: currencyFromEl.value, to: currencyToEl.value })
-    );
+    localStorage.setItem(LS_LAST, JSON.stringify(selected));
   }
+
+  function openPicker(target) {
+    pickerTarget = target;
+    pickerSearch.value = "";
+    renderPickerList("");
+    pickerOverlay.hidden = false;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => pickerSearch.focus());
+  }
+
+  function closePicker() {
+    pickerOverlay.hidden = true;
+    document.body.style.overflow = "";
+    pickerTarget = null;
+  }
+
+  function renderPickerList(query) {
+    const q = query.trim().toLowerCase();
+    const matches = allCodes.filter((code) => {
+      if (!q) return true;
+      const name = (CURRENCY_NAMES[code] || "").toLowerCase();
+      return code.toLowerCase().includes(q) || name.includes(q);
+    });
+
+    pickerList.innerHTML = "";
+    if (!matches.length) {
+      pickerList.innerHTML = '<p class="hint">No matching currency.</p>';
+      return;
+    }
+
+    const currentValue = selected[pickerTarget];
+    matches.forEach((code) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.setAttribute("role", "option");
+      item.className = "picker-item" + (code === currentValue ? " selected" : "");
+      item.innerHTML = `<span class="code">${code}</span><span class="name">${CURRENCY_NAMES[code] || ""}</span>`;
+      item.addEventListener("click", () => {
+        selectCurrency(pickerTarget, code);
+        closePicker();
+      });
+      pickerList.appendChild(item);
+    });
+  }
+
+  currencyFromTrigger.addEventListener("click", () => openPicker("from"));
+  currencyToTrigger.addEventListener("click", () => openPicker("to"));
+  pickerCancel.addEventListener("click", closePicker);
+  pickerOverlay.addEventListener("click", (e) => {
+    if (e.target === pickerOverlay) closePicker();
+  });
+  pickerSearch.addEventListener("input", () => renderPickerList(pickerSearch.value));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !pickerOverlay.hidden) closePicker();
+  });
 
   // ---------- Conversion ----------
   function convert() {
     if (!rates) return;
-    const from = currencyFromEl.value;
-    const to = currencyToEl.value;
+    const from = selected.from;
+    const to = selected.to;
     const amount = parseFloat(amountFromEl.value);
 
     if (!rates[from] || !rates[to] || isNaN(amount)) {
@@ -167,17 +225,15 @@
   }
 
   function swap() {
-    const f = currencyFromEl.value;
-    const t = currencyToEl.value;
-    currencyFromEl.value = t;
-    currencyToEl.value = f;
+    const f = selected.from;
+    selected.from = selected.to;
+    selected.to = f;
+    updateTriggerLabels();
     convert();
   }
 
   swapBtn.addEventListener("click", swap);
   amountFromEl.addEventListener("input", convert);
-  currencyFromEl.addEventListener("change", convert);
-  currencyToEl.addEventListener("change", convert);
 
   async function fetchPrimaryRates() {
     const res = await fetch(RATES_API);
@@ -222,7 +278,7 @@
     rates = result.rates;
     lastUpdated = result.updated;
 
-    populateDropdowns(Object.keys(rates));
+    setupCurrencies(Object.keys(rates));
     renderFavorites();
     convert();
 
